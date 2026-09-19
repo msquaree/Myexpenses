@@ -1,0 +1,1408 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>iOS Expense Tracker - Rupee Edition</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        iosBgLight: '#F2F2F7',
+                        iosBgDark: '#000000',
+                        iosCardLight: '#FFFFFF',
+                        iosCardDark: '#1C1C1E',
+                        iosCardDarkHover: '#2C2C2E',
+                        iosBlue: '#0A84FF',
+                        iosGreen: '#30D158',
+                        iosRed: '#FF453A',
+                        iosOrange: '#FF9F0A',
+                        iosPurple: '#BF5AF2',
+                        iosYellow: '#FFD60A',
+                        iosTeal: '#64D2FF',
+                        iosPink: '#FF375F',
+                        iosGray: '#8E8E93',
+                        iosGray2: '#AEAEB2',
+                        iosGray6: '#1C1C1E'
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', 'Inter', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* iOS Touch interactions and scroll tweaks */
+        body {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+            touch-action: manipulation;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+        }
+
+        .pb-safe { padding-bottom: max(1.2rem, env(safe-area-inset-bottom)); }
+        .pt-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
+
+        .glass-header {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .dark .glass-header {
+            background: rgba(0, 0, 0, 0.82);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .glass-tabbar {
+            background: rgba(255, 255, 255, 0.88);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+        }
+        .dark .glass-tabbar {
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+        }
+
+        /* Bottom Sheet Transitions */
+        .sheet-enter {
+            transform: translateY(100%);
+            transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .sheet-enter-active {
+            transform: translateY(0);
+        }
+
+        .ios-press {
+            transition: transform 0.12s ease, opacity 0.12s ease;
+        }
+        .ios-press:active {
+            transform: scale(0.96);
+            opacity: 0.85;
+        }
+
+        ::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body class="bg-iosBgLight dark:bg-iosBgDark text-gray-900 dark:text-gray-100 min-h-screen flex flex-col font-sans transition-colors duration-200">
+
+    <!-- iOS Header Navigation Bar -->
+    <header id="main-header" class="sticky top-0 z-30 glass-header border-b border-gray-200/50 dark:border-gray-800/80 px-4 pt-safe pt-3 pb-3 transition-all duration-200">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div>
+                <p id="header-subtitle" class="text-[11px] font-semibold uppercase tracking-wider text-iosGray">Overview</p>
+                <h1 id="header-title" class="text-2xl font-bold tracking-tight">Dashboard</h1>
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <!-- Rupee Badge -->
+                <div class="px-2.5 py-1 rounded-full bg-iosGreen/15 text-iosGreen text-xs font-bold tracking-wide border border-iosGreen/30 flex items-center gap-1">
+                    <span>INR (₹)</span>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button onclick="toggleTheme()" class="p-2 rounded-full bg-gray-200/80 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700 transition ios-press" aria-label="Toggle Theme">
+                    <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+                    <i data-lucide="sun" class="w-4 h-4 hidden dark:block"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Dynamic Month Picker Bar -->
+        <div class="max-w-md mx-auto mt-3 pt-2 border-t border-gray-200/40 dark:border-gray-800/60 flex items-center justify-between">
+            <button onclick="navigateMonth(-1)" class="p-1.5 rounded-xl bg-gray-200/60 dark:bg-gray-800 text-iosGray hover:text-gray-900 dark:hover:text-white transition ios-press flex items-center gap-1 text-xs">
+                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                <span class="hidden sm:inline">Prev</span>
+            </button>
+
+            <div class="flex items-center gap-2">
+                <div class="relative">
+                    <input type="month" id="header-month-input" onchange="handleMonthInputChange(event)" class="absolute inset-0 opacity-0 w-full h-full cursor-pointer">
+                    <div class="px-3 py-1 bg-iosCardLight dark:bg-iosCardDark rounded-full border border-gray-200 dark:border-gray-800 flex items-center gap-2 shadow-xs cursor-pointer">
+                        <i data-lucide="calendar" class="w-3.5 h-3.5 text-iosBlue"></i>
+                        <span id="header-month-label" class="text-xs font-bold tracking-tight">September 2026</span>
+                        <i data-lucide="chevron-down" class="w-3 h-3 text-iosGray"></i>
+                    </div>
+                </div>
+
+                <button id="header-alltime-btn" onclick="toggleAllTimeFilter()" class="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-200/60 dark:bg-gray-800 text-iosGray transition">
+                    All Time
+                </button>
+            </div>
+
+            <button onclick="navigateMonth(1)" class="p-1.5 rounded-xl bg-gray-200/60 dark:bg-gray-800 text-iosGray hover:text-gray-900 dark:hover:text-white transition ios-press flex items-center gap-1 text-xs">
+                <span class="hidden sm:inline">Next</span>
+                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Viewport -->
+    <main id="app-viewport" class="flex-1 overflow-y-auto px-4 pt-4 pb-28 max-w-md mx-auto w-full">
+        
+        <!-- ================= TAB 1: DASHBOARD ================= -->
+        <div id="tab-dashboard" class="tab-page space-y-4">
+            <!-- Selected Month Overview Hero Card -->
+            <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-600 via-teal-600 to-iosBlue p-5 text-white shadow-xl shadow-teal-500/15">
+                <div class="absolute -right-6 -bottom-6 w-32 h-32 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="text-[11px] uppercase font-semibold tracking-wider text-teal-100/80">Total Expense</p>
+                        <h2 id="dash-total-expense" class="text-3xl font-extrabold mt-0.5 tracking-tight">₹0.00</h2>
+                    </div>
+                    <!-- Month over month indicator -->
+                    <div id="dash-mom-badge" class="px-2.5 py-1 bg-white/15 rounded-full text-[11px] font-semibold backdrop-blur-md text-teal-50 flex items-center gap-1">
+                        <i data-lucide="trending-down" class="w-3 h-3"></i>
+                        <span>0% vs last month</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-3 border-t border-white/15 grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                        <span class="block text-teal-100/70 text-[10px] uppercase font-semibold">Monthly Income</span>
+                        <span id="dash-monthly-income" class="font-bold text-xs text-green-300">+₹0.00</span>
+                    </div>
+                    <div class="text-center">
+                        <span class="block text-teal-100/70 text-[10px] uppercase font-semibold">Daily Avg</span>
+                        <span id="dash-daily-avg" class="font-bold text-xs text-teal-100">₹0/day</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-teal-100/70 text-[10px] uppercase font-semibold">Highest Day</span>
+                        <span id="dash-peak-day" class="font-bold text-xs text-teal-100">₹0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monthly Budget Progress Bar -->
+            <div class="bg-iosCardLight dark:bg-iosCardDark p-4 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800/80">
+                <div class="flex justify-between items-center mb-2">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="target" class="w-4 h-4 text-iosBlue"></i>
+                        <span class="text-xs font-bold text-gray-700 dark:text-gray-300">Monthly Budget Cap</span>
+                    </div>
+                    <span id="dash-budget-percentage" class="text-xs font-extrabold text-iosBlue">0%</span>
+                </div>
+                <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-3 overflow-hidden p-0.5">
+                    <div id="dash-budget-bar" class="bg-iosBlue h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-2 text-[11px] text-iosGray">
+                    <span id="dash-budget-spent">Spent: ₹0.00</span>
+                    <span id="dash-budget-total">Target: ₹0.00</span>
+                </div>
+            </div>
+
+            <!-- Quick Add Presets (Rupees) -->
+            <div>
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray">Quick Presets</h3>
+                </div>
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="quickAddPreset('Chai & Snacks', 50, 'food')" class="p-2.5 bg-iosCardLight dark:bg-iosCardDark rounded-xl border border-gray-100 dark:border-gray-800/80 flex flex-col items-center justify-center gap-1 text-center ios-press">
+                        <span class="p-1.5 rounded-full bg-iosOrange/15 text-iosOrange"><i data-lucide="coffee" class="w-4 h-4"></i></span>
+                        <span class="text-[11px] font-semibold">Chai</span>
+                        <span class="text-[10px] text-iosGray">₹50</span>
+                    </button>
+                    <button onclick="quickAddPreset('Groceries Supermarket', 600, 'food')" class="p-2.5 bg-iosCardLight dark:bg-iosCardDark rounded-xl border border-gray-100 dark:border-gray-800/80 flex flex-col items-center justify-center gap-1 text-center ios-press">
+                        <span class="p-1.5 rounded-full bg-iosOrange/15 text-iosOrange"><i data-lucide="shopping-cart" class="w-4 h-4"></i></span>
+                        <span class="text-[11px] font-semibold">Groceries</span>
+                        <span class="text-[10px] text-iosGray">₹600</span>
+                    </button>
+                    <button onclick="quickAddPreset('Auto / Cab Fare', 180, 'transport')" class="p-2.5 bg-iosCardLight dark:bg-iosCardDark rounded-xl border border-gray-100 dark:border-gray-800/80 flex flex-col items-center justify-center gap-1 text-center ios-press">
+                        <span class="p-1.5 rounded-full bg-iosTeal/15 text-iosTeal"><i data-lucide="car" class="w-4 h-4"></i></span>
+                        <span class="text-[11px] font-semibold">Auto Ride</span>
+                        <span class="text-[10px] text-iosGray">₹180</span>
+                    </button>
+                    <button onclick="quickAddPreset('Food Delivery', 450, 'food')" class="p-2.5 bg-iosCardLight dark:bg-iosCardDark rounded-xl border border-gray-100 dark:border-gray-800/80 flex flex-col items-center justify-center gap-1 text-center ios-press">
+                        <span class="p-1.5 rounded-full bg-iosPink/15 text-iosPink"><i data-lucide="utensils" class="w-4 h-4"></i></span>
+                        <span class="text-[11px] font-semibold">Zomato</span>
+                        <span class="text-[10px] text-iosGray">₹450</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Month Expenses Preview -->
+            <div class="space-y-2.5">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray" id="dash-recent-title">Month Transactions</h3>
+                    <button onclick="switchTab('expenses')" class="text-xs text-iosBlue font-semibold">View All</button>
+                </div>
+                <div id="dash-recent-list" class="space-y-2">
+                    <!-- Dynamic List Populated via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: TRANSACTIONS LOG ================= -->
+        <div id="tab-expenses" class="tab-page hidden space-y-4">
+            <!-- Search & Filters -->
+            <div class="space-y-2.5">
+                <div class="relative">
+                    <i data-lucide="search" class="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-iosGray"></i>
+                    <input type="text" id="expense-search" oninput="renderExpensesList()" placeholder="Search description or note..." 
+                        class="w-full pl-10 pr-4 py-2.5 bg-iosCardLight dark:bg-iosCardDark rounded-2xl border border-gray-200/80 dark:border-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-iosBlue">
+                </div>
+
+                <!-- Category Chips Filter -->
+                <div class="flex gap-1.5 overflow-x-auto pb-1 text-xs no-scrollbar" id="category-chips">
+                    <!-- Dynamic chips hydrated via JS -->
+                </div>
+            </div>
+
+            <!-- Grouped Transaction Records -->
+            <div id="expenses-full-list" class="space-y-4">
+                <!-- Grouped transactions hydrated via JS -->
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: MONTHLY ANALYTICS ================= -->
+        <div id="tab-analytics" class="tab-page hidden space-y-5">
+            <!-- Category Allocation Chart -->
+            <div class="bg-iosCardLight dark:bg-iosCardDark p-4 rounded-2xl border border-gray-100 dark:border-gray-800/80 shadow-xs space-y-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray">Category Breakdown</h3>
+                        <p class="text-[11px] text-iosGray" id="analytics-month-sub">September 2026</p>
+                    </div>
+                    <span id="analytics-cat-total" class="text-xs font-bold text-iosBlue">₹0.00</span>
+                </div>
+                <div class="relative h-60 w-full flex items-center justify-center">
+                    <canvas id="categoryDoughnutChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Daily Spending Timeline Chart -->
+            <div class="bg-iosCardLight dark:bg-iosCardDark p-4 rounded-2xl border border-gray-100 dark:border-gray-800/80 shadow-xs space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray">Daily Spending Pattern</h3>
+                    <span class="text-[11px] text-iosGray">Days of Month</span>
+                </div>
+                <div class="relative h-56 w-full">
+                    <canvas id="spendingTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Category Spend List -->
+            <div class="space-y-2">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray">Detailed Breakdown</h3>
+                <div id="analytics-category-list" class="space-y-2">
+                    <!-- Hydrated via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: MONTH REPORTS & CATEGORY MANAGER ================= -->
+        <div id="tab-reports" class="tab-page hidden space-y-5">
+            <!-- Monthly Historical Summary -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray">Month-by-Month History</h3>
+                        <p class="text-[11px] text-iosGray">Tap any month to switch overview</p>
+                    </div>
+                    <button onclick="exportMonthCSV()" class="px-3 py-1 rounded-full bg-iosBlue/15 text-iosBlue text-xs font-bold flex items-center gap-1">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i> Export CSV
+                    </button>
+                </div>
+
+                <div id="month-history-list" class="space-y-2">
+                    <!-- Dynamic Month Breakdown list -->
+                </div>
+            </div>
+
+            <!-- Category Management System -->
+            <div class="space-y-3 pt-2">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray">Manage Categories</h3>
+                        <p class="text-[11px] text-iosGray">Add custom category icons & budgets</p>
+                    </div>
+                    <button onclick="openCreateCategoryModal()" class="px-3 py-1.5 rounded-full bg-iosBlue text-white text-xs font-bold flex items-center gap-1 shadow-xs ios-press">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> New Category
+                    </button>
+                </div>
+
+                <div id="custom-categories-list" class="space-y-2">
+                    <!-- Dynamic Category list -->
+                </div>
+            </div>
+
+            <!-- Global Settings & Data Actions -->
+            <div class="space-y-3 pt-2">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-iosGray">Settings & Data</h3>
+                <div class="bg-iosCardLight dark:bg-iosCardDark rounded-2xl border border-gray-100 dark:border-gray-800/80 divide-y divide-gray-100 dark:divide-gray-800 text-sm overflow-hidden">
+                    <button onclick="openEditBudgetModal()" class="w-full p-3.5 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-iosCardDarkHover transition ios-press">
+                        <div class="flex items-center gap-3">
+                            <span class="p-2 bg-iosBlue/10 text-iosBlue rounded-xl"><i data-lucide="target" class="w-4 h-4"></i></span>
+                            <div>
+                                <span class="font-medium block">Overall Monthly Budget</span>
+                                <span class="text-[11px] text-iosGray" id="settings-budget-label">₹35,000 / month</span>
+                            </div>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-iosGray"></i>
+                    </button>
+
+                    <button onclick="loadSampleData()" class="w-full p-3.5 flex items-center justify-between text-left hover:bg-gray-50 dark:hover:bg-iosCardDarkHover transition ios-press">
+                        <div class="flex items-center gap-3">
+                            <span class="p-2 bg-iosPurple/10 text-iosPurple rounded-xl"><i data-lucide="rotate-ccw" class="w-4 h-4"></i></span>
+                            <span class="font-medium">Reset Demo Data</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-iosGray"></i>
+                    </button>
+
+                    <button onclick="confirmClearAllData()" class="w-full p-3.5 flex items-center justify-between text-left hover:bg-red-50 dark:hover:bg-red-950/20 text-iosRed transition ios-press">
+                        <div class="flex items-center gap-3">
+                            <span class="p-2 bg-iosRed/10 text-iosRed rounded-xl"><i data-lucide="trash-2" class="w-4 h-4"></i></span>
+                            <span class="font-medium">Clear All Expense Records</span>
+                        </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-iosRed/60"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Floating Add Button -->
+    <div class="fixed bottom-20 inset-x-0 z-20 flex justify-center pointer-events-none">
+        <button onclick="openAddModal()" class="pointer-events-auto bg-iosBlue hover:bg-blue-600 text-white shadow-lg shadow-blue-500/30 px-5 py-3 rounded-full flex items-center gap-2 font-semibold text-sm active:scale-95 transition ios-press">
+            <i data-lucide="plus-circle" class="w-5 h-5"></i>
+            <span>Add Expense</span>
+        </button>
+    </div>
+
+    <!-- iOS Bottom Navigation Bar -->
+    <nav class="fixed bottom-0 inset-x-0 z-30 glass-tabbar border-t border-gray-200/50 dark:border-gray-800/80 pb-safe pt-2 px-6">
+        <div class="max-w-md mx-auto flex justify-between items-center text-[10px] font-medium text-iosGray">
+            <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="flex flex-col items-center gap-1 text-iosBlue transition ios-press">
+                <i data-lucide="layout-dashboard" class="w-5 h-5"></i>
+                <span>Summary</span>
+            </button>
+            <button onclick="switchTab('expenses')" id="nav-btn-expenses" class="flex flex-col items-center gap-1 transition ios-press">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+                <span>Expenses</span>
+            </button>
+            <button onclick="switchTab('analytics')" id="nav-btn-analytics" class="flex flex-col items-center gap-1 transition ios-press">
+                <i data-lucide="pie-chart" class="w-5 h-5"></i>
+                <span>Charts</span>
+            </button>
+            <button onclick="switchTab('reports')" id="nav-btn-reports" class="flex flex-col items-center gap-1 transition ios-press">
+                <i data-lucide="calendar-range" class="w-5 h-5"></i>
+                <span>Months</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- ================= MODAL SLIDE SHEET: ADD / EDIT EXPENSE ================= -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 hidden transition-opacity opacity-0" onclick="closeAddModal()"></div>
+    
+    <div id="expense-modal" class="fixed bottom-0 inset-x-0 z-50 bg-iosCardLight dark:bg-iosCardDark rounded-t-[28px] p-5 shadow-2xl border-t border-gray-200 dark:border-gray-800 hidden sheet-enter max-w-md mx-auto">
+        <div class="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4"></div>
+        
+        <div class="flex justify-between items-center mb-4">
+            <h2 id="modal-title" class="text-lg font-bold">New Transaction</h2>
+            <button onclick="closeAddModal()" class="p-1 rounded-full text-iosGray hover:text-gray-900 dark:hover:text-white">
+                <i data-lucide="x-circle" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <form id="expense-form" onsubmit="handleSaveExpense(event)" class="space-y-4">
+            <input type="hidden" id="editing-id" value="">
+            
+            <!-- Type Switcher -->
+            <div class="grid grid-cols-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-center text-xs font-semibold">
+                <label class="cursor-pointer">
+                    <input type="radio" name="entry-type" value="expense" checked onchange="handleTypeSwitch('expense')" class="peer hidden">
+                    <div class="py-2 rounded-lg text-iosGray peer-checked:bg-white dark:peer-checked:bg-iosCardDark peer-checked:text-iosRed transition shadow-xs">Expense</div>
+                </label>
+                <label class="cursor-pointer">
+                    <input type="radio" name="entry-type" value="income" onchange="handleTypeSwitch('income')" class="peer hidden">
+                    <div class="py-2 rounded-lg text-iosGray peer-checked:bg-white dark:peer-checked:bg-iosCardDark peer-checked:text-iosGreen transition shadow-xs">Income</div>
+                </label>
+            </div>
+
+            <!-- Amount Input in Rupee -->
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1">Amount (INR)</label>
+                <div class="relative flex items-center">
+                    <span class="absolute left-3.5 text-xl font-bold text-iosGray">₹</span>
+                    <input type="number" id="input-amount" step="1" min="1" required placeholder="0" 
+                        class="w-full pl-9 pr-4 py-3 text-2xl font-bold bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 focus:outline-none focus:ring-2 focus:ring-iosBlue">
+                </div>
+            </div>
+
+            <!-- Category Picker -->
+            <div>
+                <div class="flex justify-between items-center mb-1">
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray">Category</label>
+                    <button type="button" onclick="closeAddModal(); switchTab('reports'); openCreateCategoryModal();" class="text-[11px] text-iosBlue font-bold">+ New Category</button>
+                </div>
+                <select id="input-category" class="w-full p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-iosBlue">
+                    <!-- Hydrated dynamically -->
+                </select>
+            </div>
+
+            <!-- Date and Note Inputs -->
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1">Date</label>
+                    <input type="date" id="input-date" required 
+                        class="w-full p-2.5 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-xs font-medium focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1">Note / Remark</label>
+                    <input type="text" id="input-note" placeholder="Zomato, Taxi, Rent..." 
+                        class="w-full p-2.5 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-xs focus:outline-none">
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" class="w-full mt-2 bg-iosBlue hover:bg-blue-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-500/20 active:scale-98 transition ios-press">
+                Save Entry
+            </button>
+        </form>
+    </div>
+
+    <!-- ================= MODAL SLIDE SHEET: CREATE CUSTOM CATEGORY ================= -->
+    <div id="category-modal-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 hidden transition-opacity opacity-0" onclick="closeCreateCategoryModal()"></div>
+    
+    <div id="category-modal" class="fixed bottom-0 inset-x-0 z-50 bg-iosCardLight dark:bg-iosCardDark rounded-t-[28px] p-5 shadow-2xl border-t border-gray-200 dark:border-gray-800 hidden sheet-enter max-w-md mx-auto">
+        <div class="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4"></div>
+        
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-bold">Create Custom Category</h2>
+            <button onclick="closeCreateCategoryModal()" class="p-1 rounded-full text-iosGray">
+                <i data-lucide="x-circle" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <form id="create-category-form" onsubmit="handleSaveCategory(event)" class="space-y-4">
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1">Category Type</label>
+                <div class="grid grid-cols-2 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl text-center text-xs font-semibold">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="cat-type" value="expense" checked class="peer hidden">
+                        <div class="py-2 rounded-lg text-iosGray peer-checked:bg-white dark:peer-checked:bg-iosCardDark peer-checked:text-iosRed transition">Expense</div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="cat-type" value="income" class="peer hidden">
+                        <div class="py-2 rounded-lg text-iosGray peer-checked:bg-white dark:peer-checked:bg-iosCardDark peer-checked:text-iosGreen transition">Income</div>
+                    </label>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1">Category Name</label>
+                <input type="text" id="cat-input-name" required placeholder="e.g. Gym, Subscriptions, Petrol..." 
+                    class="w-full p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-iosBlue">
+            </div>
+
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1">Monthly Target Cap (₹)</label>
+                <input type="number" id="cat-input-cap" step="100" min="0" placeholder="e.g. 5000" value="3000" 
+                    class="w-full p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-medium focus:outline-none">
+            </div>
+
+            <!-- Icon Grid -->
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1.5">Choose Icon</label>
+                <div class="grid grid-cols-6 gap-2 text-iosGray" id="icon-picker-grid"></div>
+                <input type="hidden" id="cat-input-icon" value="tag">
+            </div>
+
+            <!-- Color Palette -->
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1.5">Choose Color Theme</label>
+                <div class="flex gap-2" id="color-picker-grid"></div>
+                <input type="hidden" id="cat-input-color" value="#0A84FF">
+            </div>
+
+            <button type="submit" class="w-full mt-2 bg-iosBlue hover:bg-blue-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-blue-500/20 ios-press">
+                Create Category
+            </button>
+        </form>
+    </div>
+
+    <!-- ================= MODAL EDIT BUDGET ================= -->
+    <div id="budget-modal-backdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 hidden transition-opacity opacity-0" onclick="closeEditBudgetModal()"></div>
+    <div id="budget-modal" class="fixed bottom-0 inset-x-0 z-50 bg-iosCardLight dark:bg-iosCardDark rounded-t-[28px] p-5 shadow-2xl border-t border-gray-200 dark:border-gray-800 hidden sheet-enter max-w-md mx-auto">
+        <div class="w-10 h-1 bg-gray-300 dark:bg-gray-700 rounded-full mx-auto mb-4"></div>
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-bold">Monthly Spending Cap</h2>
+            <button onclick="closeEditBudgetModal()" class="p-1 text-iosGray"><i data-lucide="x-circle" class="w-6 h-6"></i></button>
+        </div>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-iosGray mb-1">Overall Limit (₹)</label>
+                <input type="number" id="input-overall-budget" step="500" class="w-full p-3 bg-gray-50 dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 font-bold text-lg">
+            </div>
+            <button onclick="saveOverallBudget()" class="w-full bg-iosBlue text-white font-bold py-3 rounded-xl ios-press">Save Limit</button>
+        </div>
+    </div>
+
+    <script>
+        // Default System Categories
+        const DEFAULT_CATEGORIES = {
+            expense: [
+                { id: 'food', name: 'Food & Dining', icon: 'utensils', color: '#FF9F0A', cap: 8000, isCustom: false },
+                { id: 'transport', name: 'Transport & Cab', icon: 'car', color: '#64D2FF', cap: 4000, isCustom: false },
+                { id: 'shopping', name: 'Shopping', icon: 'shopping-bag', color: '#BF5AF2', cap: 5000, isCustom: false },
+                { id: 'bills', name: 'Bills & Utilities', icon: 'zap', color: '#0A84FF', cap: 6000, isCustom: false },
+                { id: 'entertainment', name: 'Entertainment', icon: 'film', color: '#FF375F', cap: 3000, isCustom: false },
+                { id: 'health', name: 'Health & Medical', icon: 'heart-pulse', color: '#30D158', cap: 2000, isCustom: false },
+                { id: 'travel', name: 'Travel & Vacations', icon: 'plane', color: '#FFD60A', cap: 10000, isCustom: false },
+                { id: 'other_exp', name: 'General & Others', icon: 'more-horizontal', color: '#8E8E93', cap: 3000, isCustom: false }
+            ],
+            income: [
+                { id: 'salary', name: 'Salary Paycheck', icon: 'briefcase', color: '#30D158', isCustom: false },
+                { id: 'freelance', name: 'Freelance', icon: 'laptop', color: '#64D2FF', isCustom: false },
+                { id: 'investments', name: 'Investments', icon: 'trending-up', color: '#FFD60A', isCustom: false },
+                { id: 'other_inc', name: 'Other Income', icon: 'dollar-sign', color: '#BF5AF2', isCustom: false }
+            ]
+        };
+
+        const AVAILABLE_ICONS = ['coffee', 'dumbbell', 'tv', 'gift', 'home', 'wifi', 'book', 'gamepad-2', 'graduation-cap', 'tag', 'shield', 'wrench'];
+        const AVAILABLE_COLORS = ['#0A84FF', '#30D158', '#FF453A', '#FF9F0A', '#BF5AF2', '#64D2FF', '#FF375F', '#FFD60A'];
+
+        // App Persistent State
+        let categories = JSON.parse(localStorage.getItem('ios_tracker_categories')) || DEFAULT_CATEGORIES;
+        let selectedTab = 'dashboard';
+        let isAllTime = false;
+        
+        // Month State Engine (YYYY-MM)
+        const today = new Date();
+        let selectedYear = today.getFullYear();
+        let selectedMonth = today.getMonth(); // 0 indexed
+
+        let selectedCategoryFilter = 'all';
+        let overallMonthlyBudget = parseFloat(localStorage.getItem('ios_tracker_overall_budget')) || 35000;
+
+        // Sample Multi-Month Transactions Seed
+        const SAMPLE_TRANSACTIONS = [
+            // Current Month
+            { id: '101', type: 'expense', amount: 80, category: 'food', date: `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-02`, note: 'Morning Chai & Snacks' },
+            { id: '102', type: 'expense', amount: 1850, category: 'shopping', date: `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-05`, note: 'Shopping Apparel' },
+            { id: '103', type: 'expense', amount: 2400, category: 'bills', date: `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-10`, note: 'Electricity Bill' },
+            { id: '104', type: 'income', amount: 65000, category: 'salary', date: `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-01`, note: 'Monthly Salary' },
+            { id: '105', type: 'expense', amount: 320, category: 'transport', date: `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-12`, note: 'Cab to Office' },
+            { id: '106', type: 'expense', amount: 1200, category: 'food', date: `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-15`, note: 'Supermarket Grocery' },
+            
+            // Previous Month Seed
+            { id: '091', type: 'expense', amount: 450, category: 'food', date: getPrevMonthDateStr(5), note: 'Dinner Night' },
+            { id: '092', type: 'expense', amount: 3200, category: 'bills', date: getPrevMonthDateStr(10), note: 'Wifi & Phone Bills' },
+            { id: '093', type: 'income', amount: 65000, category: 'salary', date: getPrevMonthDateStr(1), note: 'Monthly Salary' }
+        ];
+
+        function getPrevMonthDateStr(day) {
+            let pm = selectedMonth - 1;
+            let py = selectedYear;
+            if (pm < 0) { pm = 11; py--; }
+            return `${py}-${String(pm+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        }
+
+        let transactions = JSON.parse(localStorage.getItem('ios_tracker_transactions')) || SAMPLE_TRANSACTIONS;
+
+        // Charts
+        let doughnutChartInstance = null;
+        let trendChartInstance = null;
+
+        function formatRupee(val) {
+            return `₹${Math.abs(val).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+        }
+
+        function getMonthName(m) {
+            return new Date(2026, m, 1).toLocaleString('en-IN', { month: 'long' });
+        }
+
+        window.onload = function() {
+            lucide.createIcons();
+
+            if (localStorage.getItem('ios_tracker_theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+            }
+
+            setupCategoryModalPickers();
+            populateCategorySelect('expense');
+            renderCategoryChips();
+            updateMonthHeaderDisplay();
+            refreshAllViews();
+        };
+
+        // Month Navigation Logic
+        function updateMonthHeaderDisplay() {
+            const label = document.getElementById('header-month-label');
+            const alltimeBtn = document.getElementById('header-alltime-btn');
+            const input = document.getElementById('header-month-input');
+
+            if (isAllTime) {
+                label.innerText = "All Time";
+                alltimeBtn.className = "px-2.5 py-1 rounded-full text-[11px] font-bold bg-iosBlue text-white transition";
+            } else {
+                label.innerText = `${getMonthName(selectedMonth)} ${selectedYear}`;
+                alltimeBtn.className = "px-2.5 py-1 rounded-full text-[11px] font-semibold bg-gray-200/60 dark:bg-gray-800 text-iosGray transition";
+                input.value = `${selectedYear}-${String(selectedMonth+1).padStart(2,'0')}`;
+            }
+
+            document.getElementById('analytics-month-sub').innerText = isAllTime ? 'All Time Records' : `${getMonthName(selectedMonth)} ${selectedYear}`;
+        }
+
+        function navigateMonth(direction) {
+            isAllTime = false;
+            selectedMonth += direction;
+            if (selectedMonth > 11) {
+                selectedMonth = 0;
+                selectedYear++;
+            } else if (selectedMonth < 0) {
+                selectedMonth = 11;
+                selectedYear--;
+            }
+            updateMonthHeaderDisplay();
+            refreshAllViews();
+        }
+
+        function handleMonthInputChange(e) {
+            if (!e.target.value) return;
+            const parts = e.target.value.split('-');
+            selectedYear = parseInt(parts[0]);
+            selectedMonth = parseInt(parts[1]) - 1;
+            isAllTime = false;
+            updateMonthHeaderDisplay();
+            refreshAllViews();
+        }
+
+        function toggleAllTimeFilter() {
+            isAllTime = !isAllTime;
+            updateMonthHeaderDisplay();
+            refreshAllViews();
+        }
+
+        function filterTransactionsByMonth(data) {
+            if (isAllTime) return data;
+            return data.filter(t => {
+                const parts = t.date.split('-');
+                const y = parseInt(parts[0]);
+                const m = parseInt(parts[1]) - 1;
+                return y === selectedYear && m === selectedMonth;
+            });
+        }
+
+        function refreshAllViews() {
+            renderDashboard();
+            renderExpensesList();
+            renderAnalytics();
+            renderMonthReportsTab();
+            saveStateToLocalStorage();
+        }
+
+        function saveStateToLocalStorage() {
+            localStorage.setItem('ios_tracker_transactions', JSON.stringify(transactions));
+            localStorage.setItem('ios_tracker_categories', JSON.stringify(categories));
+            localStorage.setItem('ios_tracker_overall_budget', overallMonthlyBudget);
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('ios_tracker_theme', isDark ? 'dark' : 'light');
+            renderAnalytics();
+        }
+
+        // Tab Switcher
+        function switchTab(tabId) {
+            selectedTab = tabId;
+            document.querySelectorAll('.tab-page').forEach(page => page.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            const buttons = ['dashboard', 'expenses', 'analytics', 'reports'];
+            buttons.forEach(b => {
+                const btn = document.getElementById(`nav-btn-${b}`);
+                if (b === tabId) {
+                    btn.className = "flex flex-col items-center gap-1 text-iosBlue transition ios-press";
+                } else {
+                    btn.className = "flex flex-col items-center gap-1 text-iosGray transition ios-press";
+                }
+            });
+
+            const titles = {
+                dashboard: { main: 'Dashboard', sub: 'Overview' },
+                expenses: { main: 'Transactions', sub: 'Activity' },
+                analytics: { main: 'Analytics', sub: 'Insights' },
+                reports: { main: 'Monthly Reports', sub: 'Breakdown' }
+            };
+            document.getElementById('header-title').innerText = titles[tabId].main;
+            document.getElementById('header-subtitle').innerText = titles[tabId].sub;
+
+            if (tabId === 'analytics') renderAnalytics();
+        }
+
+        // Render Dashboard View
+        function renderDashboard() {
+            const currentMonthRecords = filterTransactionsByMonth(transactions);
+            const monthExpenses = currentMonthRecords.filter(t => t.type === 'expense');
+            const monthIncome = currentMonthRecords.filter(t => t.type === 'income');
+
+            const totalSpent = monthExpenses.reduce((sum, t) => sum + t.amount, 0);
+            const totalInc = monthIncome.reduce((sum, t) => sum + t.amount, 0);
+
+            // Month-over-Month calculation
+            let prevMonthIndex = selectedMonth - 1;
+            let prevYearNum = selectedYear;
+            if (prevMonthIndex < 0) { prevMonthIndex = 11; prevYearNum--; }
+
+            const prevExpenses = transactions.filter(t => {
+                const parts = t.date.split('-');
+                return t.type === 'expense' && parseInt(parts[0]) === prevYearNum && (parseInt(parts[1]) - 1) === prevMonthIndex;
+            }).reduce((sum, t) => sum + t.amount, 0);
+
+            const momBadge = document.getElementById('dash-mom-badge');
+            if (prevExpenses > 0) {
+                const pctDiff = Math.round(((totalSpent - prevExpenses) / prevExpenses) * 100);
+                if (pctDiff > 0) {
+                    momBadge.className = "px-2.5 py-1 bg-iosRed/20 text-red-200 rounded-full text-[11px] font-semibold flex items-center gap-1";
+                    momBadge.innerHTML = `<i data-lucide="trending-up" class="w-3 h-3"></i><span>+${pctDiff}% vs last month</span>`;
+                } else {
+                    momBadge.className = "px-2.5 py-1 bg-white/15 text-teal-50 rounded-full text-[11px] font-semibold flex items-center gap-1";
+                    momBadge.innerHTML = `<i data-lucide="trending-down" class="w-3 h-3"></i><span>${pctDiff}% vs last month</span>`;
+                }
+            } else {
+                momBadge.className = "px-2.5 py-1 bg-white/15 text-teal-50 rounded-full text-[11px] font-semibold flex items-center gap-1";
+                momBadge.innerHTML = `<span>No previous data</span>`;
+            }
+
+            // Daily Average & Peak Day
+            const daysInMonth = isAllTime ? 30 : new Date(selectedYear, selectedMonth + 1, 0).getDate();
+            const dailyAvg = Math.round(totalSpent / (daysInMonth || 1));
+
+            // Peak Day
+            const daySumMap = {};
+            monthExpenses.forEach(t => {
+                daySumMap[t.date] = (daySumMap[t.date] || 0) + t.amount;
+            });
+            const peakAmt = Object.values(daySumMap).length ? Math.max(...Object.values(daySumMap)) : 0;
+
+            document.getElementById('dash-total-expense').innerText = formatRupee(totalSpent);
+            document.getElementById('dash-monthly-income').innerText = `+${formatRupee(totalInc)}`;
+            document.getElementById('dash-daily-avg').innerText = `${formatRupee(dailyAvg)}/day`;
+            document.getElementById('dash-peak-day').innerText = formatRupee(peakAmt);
+
+            // Monthly Budget Progress
+            const budgetPercent = Math.min(Math.round((totalSpent / overallMonthlyBudget) * 100), 100);
+            const progressBar = document.getElementById('dash-budget-bar');
+            progressBar.style.width = `${budgetPercent}%`;
+            progressBar.className = budgetPercent >= 90 ? "bg-iosRed h-full rounded-full transition-all duration-500" : "bg-iosBlue h-full rounded-full transition-all duration-500";
+
+            document.getElementById('dash-budget-percentage').innerText = `${budgetPercent}%`;
+            document.getElementById('dash-budget-spent').innerText = `Spent: ${formatRupee(totalSpent)}`;
+            document.getElementById('dash-budget-total').innerText = `Target: ${formatRupee(overallMonthlyBudget)}`;
+
+            // Recent Transactions List
+            const recentList = document.getElementById('dash-recent-list');
+            const sortedRecent = [...currentMonthRecords].sort((a,b) => new Date(b.date) - new Date(a.date)).slice(0, 5);
+
+            document.getElementById('dash-recent-title').innerText = isAllTime ? 'All Recent Activity' : `${getMonthName(selectedMonth)} Transactions`;
+
+            if (sortedRecent.length === 0) {
+                recentList.innerHTML = `<div class="text-center py-6 text-xs text-iosGray">No transactions in ${isAllTime ? 'history' : getMonthName(selectedMonth)}</div>`;
+                return;
+            }
+
+            recentList.innerHTML = sortedRecent.map(t => renderTransactionRowHtml(t)).join('');
+            lucide.createIcons();
+        }
+
+        function renderTransactionRowHtml(t) {
+            const allCats = [...categories.expense, ...categories.income];
+            const catObj = allCats.find(c => c.id === t.category) || { name: t.category, icon: 'tag', color: '#8E8E93' };
+            const isExpense = t.type === 'expense';
+
+            return `
+                <div class="bg-iosCardLight dark:bg-iosCardDark p-3.5 rounded-2xl flex items-center justify-between border border-gray-100 dark:border-gray-800/80 shadow-xs transition ios-press">
+                    <div class="flex items-center gap-3">
+                        <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-xs font-bold shadow-xs" style="background-color: ${catObj.color}">
+                            <i data-lucide="${catObj.icon}" class="w-4 h-4"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-xs leading-snug">${t.note || catObj.name}</h4>
+                            <p class="text-[10px] text-iosGray">${catObj.name} • ${t.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-xs ${isExpense ? 'text-gray-900 dark:text-gray-100' : 'text-iosGreen'}">
+                            ${isExpense ? '-' : '+'}${formatRupee(t.amount)}
+                        </span>
+                        <button onclick="editTransaction('${t.id}')" class="p-1 text-gray-400 hover:text-iosBlue transition">
+                            <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button onclick="deleteTransaction('${t.id}')" class="p-1 text-gray-300 hover:text-iosRed transition">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderCategoryChips() {
+            const chipsContainer = document.getElementById('category-chips');
+            let html = `
+                <button onclick="setCategoryFilter('all')" class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${selectedCategoryFilter === 'all' ? 'bg-iosBlue text-white shadow-xs' : 'bg-iosCardLight dark:bg-iosCardDark text-iosGray border border-gray-200 dark:border-gray-800'}">
+                    All Categories
+                </button>
+            `;
+
+            categories.expense.forEach(cat => {
+                const isActive = selectedCategoryFilter === cat.id;
+                html += `
+                    <button onclick="setCategoryFilter('${cat.id}')" class="px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition ${isActive ? 'bg-iosBlue text-white shadow-xs' : 'bg-iosCardLight dark:bg-iosCardDark text-iosGray border border-gray-200 dark:border-gray-800'}">
+                        ${cat.name}
+                    </button>
+                `;
+            });
+            chipsContainer.innerHTML = html;
+        }
+
+        function setCategoryFilter(catId) {
+            selectedCategoryFilter = catId;
+            renderCategoryChips();
+            renderExpensesList();
+        }
+
+        // Render Transactions List View
+        function renderExpensesList() {
+            const searchVal = document.getElementById('expense-search').value.toLowerCase();
+            const listContainer = document.getElementById('expenses-full-list');
+
+            let filtered = filterTransactionsByMonth(transactions);
+
+            if (selectedCategoryFilter !== 'all') {
+                filtered = filtered.filter(t => t.category === selectedCategoryFilter);
+            }
+
+            if (searchVal) {
+                filtered = filtered.filter(t => 
+                    (t.note && t.note.toLowerCase().includes(searchVal)) || 
+                    t.category.toLowerCase().includes(searchVal)
+                );
+            }
+
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `<div class="text-center py-12 text-xs text-iosGray">No transactions found for ${isAllTime ? 'All Time' : `${getMonthName(selectedMonth)} ${selectedYear}`}</div>`;
+                return;
+            }
+
+            const grouped = {};
+            filtered.forEach(t => {
+                if (!grouped[t.date]) grouped[t.date] = [];
+                grouped[t.date].push(t);
+            });
+
+            let html = '';
+            Object.keys(grouped).forEach(dateStr => {
+                const items = grouped[dateStr];
+                const dayTotal = items.reduce((sum, item) => item.type === 'expense' ? sum + item.amount : sum, 0);
+
+                html += `
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center px-1 text-[11px] font-bold uppercase tracking-wider text-iosGray">
+                            <span>${dateStr}</span>
+                            <span>Spent: ${formatRupee(dayTotal)}</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${items.map(t => renderTransactionRowHtml(t)).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+            listContainer.innerHTML = html;
+            lucide.createIcons();
+        }
+
+        // Render Analytics View
+        function renderAnalytics() {
+            const filteredExpenses = filterTransactionsByMonth(transactions).filter(t => t.type === 'expense');
+            const totalCategorySpent = filteredExpenses.reduce((sum, t) => sum + t.amount, 0);
+
+            document.getElementById('analytics-cat-total').innerText = formatRupee(totalCategorySpent);
+
+            const categorySums = {};
+            filteredExpenses.forEach(t => {
+                categorySums[t.category] = (categorySums[t.category] || 0) + t.amount;
+            });
+
+            // 1. Doughnut Chart
+            const labels = [];
+            const dataVals = [];
+            const colors = [];
+
+            Object.keys(categorySums).forEach(catId => {
+                const catObj = categories.expense.find(c => c.id === catId);
+                labels.push(catObj ? catObj.name : catId);
+                dataVals.push(categorySums[catId]);
+                colors.push(catObj ? catObj.color : '#8E8E93');
+            });
+
+            const ctxDoughnut = document.getElementById('categoryDoughnutChart').getContext('2d');
+            if (doughnutChartInstance) doughnutChartInstance.destroy();
+
+            doughnutChartInstance = new Chart(ctxDoughnut, {
+                type: 'doughnut',
+                data: {
+                    labels: labels.length ? labels : ['No Data'],
+                    datasets: [{
+                        data: dataVals.length ? dataVals : [1],
+                        backgroundColor: colors.length ? colors : ['#3A3A3C'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) { return ` ${context.label}: ${formatRupee(context.raw)}`; }
+                            }
+                        }
+                    },
+                    cutout: '68%'
+                }
+            });
+
+            // 2. Trend Bar Chart (Days of the month)
+            const trendData = calculateTrendData(filteredExpenses);
+            const ctxTrend = document.getElementById('spendingTrendChart').getContext('2d');
+            if (trendChartInstance) trendChartInstance.destroy();
+
+            trendChartInstance = new Chart(ctxTrend, {
+                type: 'bar',
+                data: {
+                    labels: trendData.labels,
+                    datasets: [{
+                        data: trendData.values,
+                        backgroundColor: '#0A84FF',
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                        y: { grid: { color: 'rgba(142,142,147,0.1)' }, beginAtZero: true, ticks: { font: { size: 9 } } }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) { return ` Spent: ${formatRupee(context.raw)}`; }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Detailed Breakdown
+            const catListContainer = document.getElementById('analytics-category-list');
+            if (Object.keys(categorySums).length === 0) {
+                catListContainer.innerHTML = `<div class="text-center py-6 text-xs text-iosGray">No data for ${isAllTime ? 'All Time' : `${getMonthName(selectedMonth)} ${selectedYear}`}</div>`;
+                return;
+            }
+
+            catListContainer.innerHTML = Object.keys(categorySums).map(catId => {
+                const catObj = categories.expense.find(c => c.id === catId) || { name: catId, color: '#8E8E93' };
+                const amt = categorySums[catId];
+                const pct = Math.round((amt / (totalCategorySpent || 1)) * 100);
+
+                return `
+                    <div class="bg-iosCardLight dark:bg-iosCardDark p-3 rounded-xl border border-gray-100 dark:border-gray-800/80 flex items-center justify-between text-xs">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-3 h-3 rounded-full" style="background-color: ${catObj.color}"></span>
+                            <span class="font-semibold">${catObj.name}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold block">${formatRupee(amt)}</span>
+                            <span class="text-[10px] text-iosGray">${pct}% of total</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function calculateTrendData(filtered) {
+            const dateMap = {};
+            filtered.forEach(t => {
+                dateMap[t.date] = (dateMap[t.date] || 0) + t.amount;
+            });
+
+            const sortedDates = Object.keys(dateMap).sort();
+            const labels = sortedDates.map(d => d.slice(8)); // day numbers
+            const values = sortedDates.map(d => dateMap[d]);
+
+            return {
+                labels: labels.length ? labels : ['Day'],
+                values: values.length ? values : [0]
+            };
+        }
+
+        // Month Reports & Category Tab
+        function renderMonthReportsTab() {
+            document.getElementById('settings-budget-label').innerText = `${formatRupee(overallMonthlyBudget)} / month`;
+
+            // Month History list grouping
+            const monthMap = {};
+            transactions.forEach(t => {
+                if (t.type !== 'expense') return;
+                const parts = t.date.split('-');
+                const monthKey = `${parts[0]}-${parts[1]}`;
+                monthMap[monthKey] = (monthMap[monthKey] || 0) + t.amount;
+            });
+
+            const sortedMonths = Object.keys(monthMap).sort().reverse();
+            const historyContainer = document.getElementById('month-history-list');
+
+            if (sortedMonths.length === 0) {
+                historyContainer.innerHTML = `<div class="text-center py-6 text-xs text-iosGray">No history logged yet</div>`;
+            } else {
+                historyContainer.innerHTML = sortedMonths.map(key => {
+                    const [y, m] = key.split('-');
+                    const mIndex = parseInt(m) - 1;
+                    const spent = monthMap[key];
+                    const isSelected = !isAllTime && selectedYear === parseInt(y) && selectedMonth === mIndex;
+
+                    return `
+                        <div onclick="selectHistoricalMonth(${y}, ${mIndex})" class="bg-iosCardLight dark:bg-iosCardDark p-3.5 rounded-2xl border ${isSelected ? 'border-iosBlue' : 'border-gray-100 dark:border-gray-800/80'} flex items-center justify-between text-xs cursor-pointer ios-press">
+                            <div class="flex items-center gap-3">
+                                <span class="p-2 rounded-xl ${isSelected ? 'bg-iosBlue text-white' : 'bg-gray-100 dark:bg-gray-800 text-iosGray'}">
+                                    <i data-lucide="calendar" class="w-4 h-4"></i>
+                                </span>
+                                <div>
+                                    <h4 class="font-bold text-sm">${getMonthName(mIndex)} ${y}</h4>
+                                    <span class="text-[10px] text-iosGray">${isSelected ? 'Currently Viewing' : 'Tap to switch view'}</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="font-extrabold text-sm block">${formatRupee(spent)}</span>
+                                <span class="text-[10px] ${spent > overallMonthlyBudget ? 'text-iosRed font-semibold' : 'text-iosGray'}">
+                                    ${spent > overallMonthlyBudget ? 'Over Budget' : 'Within Budget'}
+                                </span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // Categories Manager
+            const monthExpenses = filterTransactionsByMonth(transactions).filter(t => t.type === 'expense');
+            const catSpentMap = {};
+            monthExpenses.forEach(t => { catSpentMap[t.category] = (catSpentMap[t.category] || 0) + t.amount; });
+
+            const managerList = document.getElementById('custom-categories-list');
+            managerList.innerHTML = categories.expense.map(cat => {
+                const spent = catSpentMap[cat.id] || 0;
+                const pct = Math.min(Math.round((spent / (cat.cap || 1)) * 100), 100);
+                const isOver = spent > cat.cap;
+
+                return `
+                    <div class="bg-iosCardLight dark:bg-iosCardDark p-3.5 rounded-2xl border border-gray-100 dark:border-gray-800/80 space-y-2">
+                        <div class="flex justify-between items-center text-xs">
+                            <div class="flex items-center gap-2.5">
+                                <div class="w-7 h-7 rounded-lg flex items-center justify-center text-white font-bold" style="background-color: ${cat.color}">
+                                    <i data-lucide="${cat.icon}" class="w-3.5 h-3.5"></i>
+                                </div>
+                                <div>
+                                    <span class="font-semibold block">${cat.name}</span>
+                                    ${cat.isCustom ? '<span class="text-[9px] text-iosBlue font-bold uppercase">Custom</span>' : ''}
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold ${isOver ? 'text-iosRed' : 'text-iosGray'}">${formatRupee(spent)} / ${formatRupee(cat.cap)}</span>
+                                ${cat.isCustom ? `
+                                    <button onclick="deleteCustomCategory('${cat.id}')" class="text-gray-400 hover:text-iosRed transition p-1">
+                                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+
+                        <div class="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2 overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-300 ${isOver ? 'bg-iosRed' : 'bg-iosBlue'}" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function selectHistoricalMonth(y, m) {
+            selectedYear = y;
+            selectedMonth = m;
+            isAllTime = false;
+            updateMonthHeaderDisplay();
+            switchTab('dashboard');
+            refreshAllViews();
+        }
+
+        // Category Picker Helpers
+        function setupCategoryModalPickers() {
+            const iconGrid = document.getElementById('icon-picker-grid');
+            iconGrid.innerHTML = AVAILABLE_ICONS.map((icon, idx) => `
+                <button type="button" onclick="selectIcon('${icon}')" id="icon-btn-${icon}" 
+                    class="p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center ${idx === 0 ? 'bg-iosBlue text-white border-iosBlue' : ''}">
+                    <i data-lucide="${icon}" class="w-4 h-4"></i>
+                </button>
+            `).join('');
+
+            const colorGrid = document.getElementById('color-picker-grid');
+            colorGrid.innerHTML = AVAILABLE_COLORS.map((clr, idx) => `
+                <button type="button" onclick="selectColor('${clr}')" id="color-btn-${clr.replace('#','')}" 
+                    class="w-8 h-8 rounded-full flex items-center justify-center text-white font-bold transition ${idx === 0 ? 'ring-2 ring-offset-2 ring-iosBlue' : ''}" 
+                    style="background-color: ${clr}">
+                </button>
+            `).join('');
+
+            document.getElementById('cat-input-icon').value = AVAILABLE_ICONS[0];
+            document.getElementById('cat-input-color').value = AVAILABLE_COLORS[0];
+        }
+
+        function selectIcon(icon) {
+            AVAILABLE_ICONS.forEach(i => {
+                const btn = document.getElementById(`icon-btn-${i}`);
+                btn.className = (i === icon) ? "p-2.5 rounded-xl bg-iosBlue text-white border-iosBlue flex items-center justify-center" : "p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-center text-iosGray";
+            });
+            document.getElementById('cat-input-icon').value = icon;
+        }
+
+        function selectColor(clr) {
+            AVAILABLE_COLORS.forEach(c => {
+                const btn = document.getElementById(`color-btn-${c.replace('#','')}`);
+                if (c === clr) btn.classList.add('ring-2', 'ring-offset-2', 'ring-iosBlue');
+                else btn.classList.remove('ring-2', 'ring-offset-2', 'ring-iosBlue');
+            });
+            document.getElementById('cat-input-color').value = clr;
+        }
+
+        function openCreateCategoryModal() {
+            document.getElementById('category-modal-backdrop').classList.remove('hidden');
+            setTimeout(() => document.getElementById('category-modal-backdrop').classList.remove('opacity-0'), 10);
+            
+            const sheet = document.getElementById('category-modal');
+            sheet.classList.remove('hidden');
+            setTimeout(() => sheet.classList.add('sheet-enter-active'), 10);
+        }
+
+        function closeCreateCategoryModal() {
+            const sheet = document.getElementById('category-modal');
+            sheet.classList.remove('sheet-enter-active');
+            document.getElementById('category-modal-backdrop').classList.add('opacity-0');
+            
+            setTimeout(() => {
+                sheet.classList.add('hidden');
+                document.getElementById('category-modal-backdrop').classList.add('hidden');
+                document.getElementById('create-category-form').reset();
+            }, 300);
+        }
+
+        function handleSaveCategory(e) {
+            e.preventDefault();
+            const catType = document.querySelector('input[name="cat-type"]:checked').value;
+            const name = document.getElementById('cat-input-name').value.trim();
+            const cap = parseFloat(document.getElementById('cat-input-cap').value) || 2000;
+            const icon = document.getElementById('cat-input-icon').value;
+            const color = document.getElementById('cat-input-color').value;
+
+            if (!name) return;
+
+            const newCategory = {
+                id: `cat_${Date.now()}`,
+                name,
+                icon,
+                color,
+                cap,
+                isCustom: true
+            };
+
+            categories[catType].push(newCategory);
+            
+            populateCategorySelect(catType);
+            renderCategoryChips();
+            refreshAllViews();
+            closeCreateCategoryModal();
+        }
+
+        function deleteCustomCategory(id) {
+            categories.expense = categories.expense.filter(c => c.id !== id);
+            categories.income = categories.income.filter(c => c.id !== id);
+            populateCategorySelect('expense');
+            renderCategoryChips();
+            refreshAllViews();
+        }
+
+        function populateCategorySelect(type) {
+            const select = document.getElementById('input-category');
+            select.innerHTML = categories[type].map(c => `<option value="${c.id}">${c.name}${c.isCustom ? ' (Custom)' : ''}</option>`).join('');
+        }
+
+        function handleTypeSwitch(type) {
+            populateCategorySelect(type);
+        }
+
+        function quickAddPreset(note, amount, category) {
+            const dateStr = `${selectedYear}-${String(selectedMonth+1).padStart(2,'0')}-15`;
+            const newEntry = {
+                id: Date.now().toString(),
+                type: 'expense',
+                amount: amount,
+                category: category,
+                date: dateStr,
+                note: note
+            };
+            transactions.push(newEntry);
+            refreshAllViews();
+        }
+
+        function editTransaction(id) {
+            const target = transactions.find(t => t.id === id);
+            if (!target) return;
+
+            document.getElementById('editing-id').value = target.id;
+            document.getElementById('modal-title').innerText = "Edit Entry";
+            document.getElementById('input-amount').value = target.amount;
+            document.getElementById('input-date').value = target.date;
+            document.getElementById('input-note').value = target.note || '';
+
+            populateCategorySelect(target.type);
+            document.getElementById('input-category').value = target.category;
+
+            openAddModal();
+        }
+
+        function handleSaveExpense(e) {
+            e.preventDefault();
+            const editingId = document.getElementById('editing-id').value;
+            const entryType = document.querySelector('input[name="entry-type"]:checked').value;
+            const amount = parseFloat(document.getElementById('input-amount').value);
+            const category = document.getElementById('input-category').value;
+            const date = document.getElementById('input-date').value;
+            const note = document.getElementById('input-note').value;
+
+            if (!amount || amount <= 0) return;
+
+            if (editingId) {
+                const idx = transactions.findIndex(t => t.id === editingId);
+                if (idx !== -1) {
+                    transactions[idx] = { id: editingId, type: entryType, amount, category, date, note };
+                }
+            } else {
+                transactions.push({ id: Date.now().toString(), type: entryType, amount, category, date, note });
+            }
+
+            refreshAllViews();
+            closeAddModal();
+        }
+
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            refreshAllViews();
+        }
+
+        function openAddModal() {
+            if (!document.getElementById('editing-id').value) {
+                document.getElementById('modal-title').innerText = "New Transaction";
+                document.getElementById('input-date').value = `${selectedYear}-${String(selectedMonth+1).padStart(2,'0')}-15`;
+            }
+
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            setTimeout(() => document.getElementById('modal-backdrop').classList.remove('opacity-0'), 10);
+            
+            const sheet = document.getElementById('expense-modal');
+            sheet.classList.remove('hidden');
+            setTimeout(() => sheet.classList.add('sheet-enter-active'), 10);
+        }
+
+        function closeAddModal() {
+            const sheet = document.getElementById('expense-modal');
+            sheet.classList.remove('sheet-enter-active');
+            document.getElementById('modal-backdrop').classList.add('opacity-0');
+            
+            setTimeout(() => {
+                sheet.classList.add('hidden');
+                document.getElementById('modal-backdrop').classList.add('hidden');
+                document.getElementById('expense-form').reset();
+                document.getElementById('editing-id').value = '';
+            }, 300);
+        }
+
+        function openEditBudgetModal() {
+            document.getElementById('input-overall-budget').value = overallMonthlyBudget;
+            document.getElementById('budget-modal-backdrop').classList.remove('hidden');
+            setTimeout(() => document.getElementById('budget-modal-backdrop').classList.remove('opacity-0'), 10);
+            
+            const sheet = document.getElementById('budget-modal');
+            sheet.classList.remove('hidden');
+            setTimeout(() => sheet.classList.add('sheet-enter-active'), 10);
+        }
+
+        function closeEditBudgetModal() {
+            const sheet = document.getElementById('budget-modal');
+            sheet.classList.remove('sheet-enter-active');
+            document.getElementById('budget-modal-backdrop').classList.add('opacity-0');
+            
+            setTimeout(() => {
+                sheet.classList.add('hidden');
+                document.getElementById('budget-modal-backdrop').classList.add('hidden');
+            }, 300);
+        }
+
+        function saveOverallBudget() {
+            const val = parseFloat(document.getElementById('input-overall-budget').value);
+            if (val > 0) {
+                overallMonthlyBudget = val;
+                refreshAllViews();
+                closeEditBudgetModal();
+            }
+        }
+
+        function exportMonthCSV() {
+            const dataToExport = filterTransactionsByMonth(transactions);
+            let csvContent = "data:text/csv;charset=utf-8,ID,Type,Amount(INR),Category,Date,Note\n";
+            dataToExport.forEach(t => {
+                csvContent += `${t.id},${t.type},${t.amount},${t.category},${t.date},"${t.note || ''}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `rupee_expenses_${isAllTime ? 'all_time' : `${getMonthName(selectedMonth)}_${selectedYear}`}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function loadSampleData() {
+            transactions = SAMPLE_TRANSACTIONS;
+            categories = DEFAULT_CATEGORIES;
+            refreshAllViews();
+        }
+
+        function confirmClearAllData() {
+            transactions = [];
+            refreshAllViews();
+        }
+    </script>
+</body>
+</html>

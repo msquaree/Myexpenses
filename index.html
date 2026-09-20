@@ -605,7 +605,7 @@
 
             <div class="form-group">
                 <label class="form-label">Note / Custom Detail</label>
-                <input type="text" id="expNote" class="form-input" placeholder="e.g., Zomato dinner, Blinkit order...">
+                <input type="text" id="expNote" class="form-input" placeholder="e.g., Doctor visit, blood test, Apollo pharmacy...">
             </div>
 
             <div class="form-group">
@@ -642,6 +642,7 @@
         const DEFAULT_CATEGORIES = [
             { id: 'food', name: 'Food', icon: '🍔', tags: ['Zomato', 'Swiggy', 'Dine Out', 'Cafe'] },
             { id: 'grocery', name: 'Grocery', icon: '🛒', tags: ['Blinkit', 'Zepto', 'Offline Store', 'Supermarket'] },
+            { id: 'health', name: 'Health', icon: '🏥', tags: ['Consultation', 'Medical Tests', 'Medicines'] },
             { id: 'entertainment', name: 'Entertainment', icon: '🎬', tags: ['Movies', 'Netflix', 'Prime', 'Events'] },
             { id: 'shopping', name: 'Shopping', icon: '🛍️', tags: ['Amazon', 'Flipkart', 'Clothes', 'Electronics'] },
             { id: 'fuel', name: 'Fuel', icon: '⛽', tags: ['Petrol', 'Diesel', 'CNG'] },
@@ -845,7 +846,7 @@
             const tagLabels = Object.keys(tagMap);
             const tagData = Object.values(tagMap);
 
-            const colors = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#5856d6', '#ff2d55', '#a2845e', '#64d2ff', '#30b0c7'];
+            const colors = ['#007aff', '#34c759', '#ff9500', '#ff3b30', '#af52de', '#5856d6', '#ff2d55', '#a2845e', '#64d2ff', '#30b0c7', '#e056fd'];
 
             // 1. Dashboard Doughnut
             const ctxDash = document.getElementById('dashboardPieChart').getContext('2d');

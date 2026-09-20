@@ -42,6 +42,32 @@
             }
         }
 
+        body.light-mode {
+            --bg-main: #f4f6f2;
+            --card-bg: #ffffff;
+            --text-primary: #1f261d;
+            --text-secondary: #637060;
+            --accent-color: #556b2f;
+            --accent-hover: #435522;
+            --accent-light: #e3e8d8;
+            --border-color: #d8dec8;
+            --nav-bg: rgba(255, 255, 255, 0.90);
+        }
+
+        body.dark-mode {
+            --bg-main: #141714;
+            --card-bg: #1f241f;
+            --text-primary: #e6eae4;
+            --text-secondary: #8c9b88;
+            --accent-color: #8fa355;
+            --accent-hover: #7c9045;
+            --accent-light: #2b3327;
+            --accent-green: #52796f;
+            --accent-red: #d66853;
+            --border-color: #2a312a;
+            --nav-bg: rgba(31, 36, 31, 0.90);
+        }
+
         * {
             box-sizing: border-box;
             margin: 0;
@@ -72,6 +98,32 @@
             z-index: 10;
             backdrop-filter: blur(10px);
             -webkit-backdrop-filter: blur(10px);
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .theme-toggle-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+
+        .theme-toggle-btn:active {
+            transform: scale(0.90);
         }
 
         .app-title {
@@ -594,8 +646,11 @@
     <!-- Header -->
     <div class="app-header">
         <div class="app-title" id="pageTitle">Overview</div>
-        <div class="month-selector">
-            <input type="month" id="monthPicker" onchange="changeMonth()">
+        <div class="header-controls">
+            <button class="theme-toggle-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle Light/Dark Theme">🌙</button>
+            <div class="month-selector">
+                <input type="month" id="monthPicker" onchange="changeMonth()">
+            </div>
         </div>
     </div>
 
@@ -794,7 +849,8 @@
             budgets: {},
             categories: DEFAULT_CATEGORIES,
             selectedMonth: new Date().toISOString().slice(0, 7),
-            selectedTag: ''
+            selectedTag: '',
+            theme: 'dark'
         };
 
         let dashPieChartInstance = null;
@@ -803,12 +859,35 @@
 
         window.addEventListener('DOMContentLoaded', () => {
             loadState();
+            initTheme();
             document.getElementById('monthPicker').value = state.selectedMonth;
             document.getElementById('expDate').valueAsDate = new Date();
             renderCategorySelect();
             renderCategoryGrid();
             updateDashboard();
         });
+
+        function initTheme() {
+            const savedTheme = localStorage.getItem('et_theme') || 'dark';
+            applyTheme(savedTheme);
+        }
+
+        function toggleTheme() {
+            const newTheme = state.theme === 'dark' ? 'light' : 'dark';
+            applyTheme(newTheme);
+            localStorage.setItem('et_theme', newTheme);
+            updateDashboard();
+        }
+
+        function applyTheme(theme) {
+            state.theme = theme;
+            document.body.classList.remove('dark-mode', 'light-mode');
+            document.body.classList.add(`${theme}-mode`);
+            const themeBtn = document.getElementById('themeBtn');
+            if (themeBtn) {
+                themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+            }
+        }
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
@@ -987,25 +1066,27 @@
 
             const colors = DISTINCT_COLORS.slice(0, catLabels.length);
 
-            // Data label plugin config to display percentages on pie/doughnut segments
+            // Crisp white datalabels directly on top of pie segments without slice borders
             const datalabelsConfig = {
                 color: '#ffffff',
-                font: { weight: 'bold', size: 11 },
-                textShadowColor: 'rgba(0, 0, 0, 0.5)',
+                font: { weight: 'bold', size: 12 },
+                textShadowColor: 'rgba(0, 0, 0, 0.6)',
                 textShadowBlur: 4,
                 formatter: (value) => {
                     if (catTotal === 0) return '';
                     const pct = Math.round((value / catTotal) * 100);
-                    return pct >= 4 ? `${pct}%` : ''; // Show percentage if slice is large enough
+                    return pct >= 4 ? `${pct}%` : '';
                 }
             };
+
+            const primaryTextColor = getComputedStyle(document.body).getPropertyValue('--text-primary').trim() || '#e6eae4';
 
             // Custom Legend generator to show Category, % Share, and Rupee Amount
             const legendWithPct = {
                 position: 'bottom',
                 labels: {
                     boxWidth: 12,
-                    color: getComputedStyle(document.body).getPropertyValue('--text-primary').trim() || '#e6eae4',
+                    color: primaryTextColor,
                     font: { size: 11, weight: '600' },
                     padding: 12,
                     generateLabels: (chart) => {
@@ -1022,7 +1103,7 @@
                                     text: `${label}: ${pct}% (₹${Math.round(val).toLocaleString('en-IN')})`,
                                     fillStyle: style.backgroundColor,
                                     strokeStyle: style.borderColor,
-                                    lineWidth: style.borderWidth,
+                                    lineWidth: 0,
                                     hidden: isNaN(dataset.data[i]) || meta.data[i].hidden,
                                     index: i
                                 };
@@ -1043,14 +1124,21 @@
                 }
             };
 
-            // 1. Dashboard Doughnut Chart
+            // 1. Dashboard Doughnut Chart (No borders between slices, crisp white text inside)
             const canvasDash = document.getElementById('dashboardPieChart');
             if (canvasDash) {
                 if (dashPieChartInstance) dashPieChartInstance.destroy();
                 dashPieChartInstance = new Chart(canvasDash.getContext('2d'), {
                     type: 'doughnut',
                     plugins: [ChartDataLabels],
-                    data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: colors, borderWidth: 2, borderColor: 'var(--card-bg)' }] },
+                    data: { 
+                        labels: catLabels, 
+                        datasets: [{ 
+                            data: catData, 
+                            backgroundColor: colors, 
+                            borderWidth: 0 
+                        }] 
+                    },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
@@ -1063,14 +1151,21 @@
                 });
             }
 
-            // 2. Analytics Category Pie Chart
+            // 2. Analytics Category Pie Chart (No borders between slices, crisp white text inside)
             const canvasCat = document.getElementById('analyticsCategoryChart');
             if (canvasCat) {
                 if (analyticsCatChartInstance) analyticsCatChartInstance.destroy();
                 analyticsCatChartInstance = new Chart(canvasCat.getContext('2d'), {
                     type: 'pie',
                     plugins: [ChartDataLabels],
-                    data: { labels: catLabels, datasets: [{ data: catData, backgroundColor: colors, borderWidth: 2, borderColor: 'var(--card-bg)' }] },
+                    data: { 
+                        labels: catLabels, 
+                        datasets: [{ 
+                            data: catData, 
+                            backgroundColor: colors, 
+                            borderWidth: 0 
+                        }] 
+                    },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
@@ -1100,12 +1195,15 @@
                             datalabels: {
                                 anchor: 'end',
                                 align: 'end',
-                                color: getComputedStyle(document.body).getPropertyValue('--text-primary').trim() || '#e6eae4',
+                                color: primaryTextColor,
                                 font: { size: 10, weight: 'bold' },
                                 formatter: (val) => val > 0 ? `₹${Math.round(val).toLocaleString('en-IN')}` : ''
                             }
                         },
-                        scales: { y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' } }, x: { grid: { display: false } } }
+                        scales: { 
+                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: primaryTextColor } }, 
+                            x: { grid: { display: false }, ticks: { color: primaryTextColor } } 
+                        }
                     }
                 });
             }

@@ -1070,7 +1070,7 @@
             const datalabelsConfig = {
                 color: '#ffffff',
                 font: { weight: 'bold', size: 12 },
-                textShadowColor: 'rgba(0, 0, 0, 0.6)',
+                textShadowColor: 'rgba(0, 0, 0, 0.8)',
                 textShadowBlur: 4,
                 formatter: (value) => {
                     if (catTotal === 0) return '';
@@ -1079,7 +1079,8 @@
                 }
             };
 
-            const primaryTextColor = getComputedStyle(document.body).getPropertyValue('--text-primary').trim() || '#e6eae4';
+            // Dynamic text color based explicitly on active theme mode
+            const primaryTextColor = state.theme === 'light' ? '#1f261d' : '#f2f5f0';
 
             // Custom Legend generator to show Category, % Share, and Rupee Amount
             const legendWithPct = {
@@ -1103,6 +1104,7 @@
                                     text: `${label}: ${pct}% (₹${Math.round(val).toLocaleString('en-IN')})`,
                                     fillStyle: style.backgroundColor,
                                     strokeStyle: style.borderColor,
+                                    fontColor: primaryTextColor,
                                     lineWidth: 0,
                                     hidden: isNaN(dataset.data[i]) || meta.data[i].hidden,
                                     index: i
@@ -1201,8 +1203,15 @@
                             }
                         },
                         scales: { 
-                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: primaryTextColor } }, 
-                            x: { grid: { display: false }, ticks: { color: primaryTextColor } } 
+                            y: { 
+                                beginAtZero: true, 
+                                grid: { color: state.theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }, 
+                                ticks: { color: primaryTextColor } 
+                            }, 
+                            x: { 
+                                grid: { display: false }, 
+                                ticks: { color: primaryTextColor } 
+                            } 
                         }
                     }
                 });

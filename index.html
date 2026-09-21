@@ -1232,7 +1232,28 @@
                 '#06B6D4', '#D97706', '#F43F5E', '#8B5CF6', '#64748B'
             ];
 
-            const colors = DISTINCT_COLORS.slice(0, catLabels.length);
+            const categoryColorMap = {};
+            catLabels.forEach((label, i) => {
+                categoryColorMap[label] = DISTINCT_COLORS[i % DISTINCT_COLORS.length];
+            });
+
+            const colors = catLabels.map(label => categoryColorMap[label]);
+
+            // Background colors, borders & offset for Pie Chart highlight + fading unselected slices
+            const pieBackgroundColors = catLabels.map(label => {
+                const baseColor = categoryColorMap[label];
+                if (!state.selectedAnalyticsCategory) return baseColor;
+                return state.selectedAnalyticsCategory === label ? baseColor : `${baseColor}33`; // Fades unselected slices
+            });
+
+            const pieBorderColors = catLabels.map(label => {
+                if (!state.selectedAnalyticsCategory) return 'transparent';
+                return state.selectedAnalyticsCategory === label ? '#ffffff' : 'transparent';
+            });
+
+            const pieOffsets = catLabels.map(label => {
+                return state.selectedAnalyticsCategory === label ? 12 : 0; // Pops out selected slice
+            });
 
             const datalabelsConfig = {
                 color: '#ffffff',
@@ -1329,8 +1350,10 @@
                         labels: catLabels, 
                         datasets: [{ 
                             data: catData, 
-                            backgroundColor: colors, 
-                            borderWidth: 0 
+                            backgroundColor: pieBackgroundColors, 
+                            borderColor: pieBorderColors,
+                            borderWidth: catLabels.map(l => state.selectedAnalyticsCategory === l ? 2 : 0),
+                            offset: pieOffsets
                         }] 
                     },
                     options: {
@@ -1369,17 +1392,43 @@
                 });
             }
 
-            // 3. Analytics Sub-category Bar Chart
+            // 3. Analytics Sub-category Bar Chart (Horizontal with slim bars & category colors)
             const canvasTag = document.getElementById('analyticsTagChart');
             if (canvasTag) {
                 if (analyticsTagChartInstance) analyticsTagChartInstance.destroy();
+
+                const tagBarColors = tagLabels.map(tag => {
+                    if (state.selectedAnalyticsCategory) {
+                        return categoryColorMap[state.selectedAnalyticsCategory] || '#35A7FF';
+                    }
+                    const sampleExp = subCategoryExpenses.find(e => (e.tag || e.note || 'General') === tag);
+                    const catName = sampleExp ? sampleExp.category : null;
+                    return (catName && categoryColorMap[catName]) ? categoryColorMap[catName] : '#35A7FF';
+                });
+
                 analyticsTagChartInstance = new Chart(canvasTag.getContext('2d'), {
                     type: 'bar',
                     plugins: [ChartDataLabels],
-                    data: { labels: tagLabels, datasets: [{ label: 'Amount (₹)', data: tagData, backgroundColor: '#35A7FF', borderRadius: 8 }] },
+                    data: { 
+                        labels: tagLabels, 
+                        datasets: [{ 
+                            label: 'Amount (₹)', 
+                            data: tagData, 
+                            backgroundColor: tagBarColors, 
+                            borderRadius: 6,
+                            maxBarThickness: 20,
+                            barPercentage: 0.7
+                        }] 
+                    },
                     options: {
+                        indexAxis: 'y',
                         responsive: true,
                         maintainAspectRatio: false,
+                        layout: {
+                            padding: {
+                                right: 65 // Extra padding so data labels fit nicely
+                            }
+                        },
                         plugins: {
                             legend: { display: false },
                             tooltip: tooltipWithPct,
@@ -1392,12 +1441,12 @@
                             }
                         },
                         scales: { 
-                            y: { 
+                            x: { 
                                 beginAtZero: true, 
                                 grid: { color: state.theme === 'light' ? 'rgba(0,0,0,0.08)' : 'rgba(255,255,255,0.08)' }, 
                                 ticks: { color: primaryTextColor } 
                             }, 
-                            x: { 
+                            y: { 
                                 grid: { display: false }, 
                                 ticks: { color: primaryTextColor } 
                             } 

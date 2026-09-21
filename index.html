@@ -541,6 +541,7 @@
             display: none;
         }
 
+        /* Bottom Nav with 5 Items */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -566,10 +567,10 @@
             gap: 4px;
             color: var(--text-secondary);
             text-decoration: none;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 600;
             cursor: pointer;
-            width: 25%;
+            width: 20%;
             transition: color 0.2s ease;
         }
 
@@ -602,7 +603,7 @@
 
         .chart-container {
             position: relative;
-            height: 220px;
+            height: 230px;
             width: 100%;
             margin-top: 10px;
         }
@@ -613,6 +614,97 @@
             color: var(--text-secondary);
             font-size: 14px;
             font-weight: 500;
+        }
+
+        /* Filter pill badge for chart filtering */
+        .filter-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--accent-light);
+            color: var(--accent-color);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+
+        .filter-badge-reset {
+            cursor: pointer;
+            font-weight: 800;
+            padding: 0 2px;
+            opacity: 0.8;
+        }
+        .filter-badge-reset:hover {
+            opacity: 1;
+        }
+
+        /* Comparison Table Styles */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 14px;
+        }
+
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .report-table th {
+            padding: 10px 12px;
+            background: var(--bg-main);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .report-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+            font-weight: 600;
+            vertical-align: middle;
+        }
+
+        .report-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .mom-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 4px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .mom-badge.inc {
+            background: rgba(214, 104, 83, 0.15);
+            color: var(--accent-red);
+        }
+
+        .mom-badge.dec {
+            background: rgba(82, 121, 111, 0.2);
+            color: #48bb78;
+        }
+
+        .mom-badge.new {
+            background: rgba(143, 163, 85, 0.2);
+            color: var(--accent-color);
+        }
+
+        .mom-badge.flat {
+            background: rgba(140, 155, 136, 0.12);
+            color: var(--text-secondary);
         }
 
         /* Custom Toast Notification */
@@ -711,21 +803,73 @@
         <!-- TAB 3: ANALYTICS -->
         <div id="tab-analytics" class="tab-content">
             <div class="card">
-                <div class="section-title" style="font-size: 15px;">Expense by Category</div>
+                <div class="section-title" style="font-size: 15px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>Expense by Category</span>
+                    <span style="font-size:11px; font-weight:500; color:var(--text-secondary);">Tap slice to filter sub-categories</span>
+                </div>
                 <div class="chart-container">
                     <canvas id="analyticsCategoryChart"></canvas>
                 </div>
             </div>
 
             <div class="card">
-                <div class="section-title" style="font-size: 15px;">Sub-category / Tag Breakdown</div>
+                <div class="section-title" style="font-size: 15px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        Sub-category / Tag Breakdown
+                        <span id="analyticsCategoryFilterBadge"></span>
+                    </div>
+                </div>
                 <div class="chart-container">
                     <canvas id="analyticsTagChart"></canvas>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 4: SETTINGS -->
+        <!-- TAB 4: REPORTS (MONTH-OVER-MONTH COMPARISON) -->
+        <div id="tab-reports" class="tab-content">
+            <!-- Summary Banner -->
+            <div class="card" style="padding: 16px; margin-bottom: 16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div>
+                        <div style="font-size: 12px; color: var(--text-secondary); font-weight: 700; text-transform: uppercase;">MoM Comparison</div>
+                        <div style="font-size: 18px; font-weight: 800; margin-top:2px;" id="reportsComparisonTitle">Current vs Previous Month</div>
+                    </div>
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; background:var(--bg-main); padding:12px; border-radius:14px; border:1px solid var(--border-color);">
+                    <div>
+                        <div style="font-size:11px; color:var(--text-secondary); font-weight:600;">Current Spend</div>
+                        <div style="font-size:18px; font-weight:800; color:var(--text-primary);" id="reportCurrSpend">₹0</div>
+                    </div>
+                    <div>
+                        <div style="font-size:11px; color:var(--text-secondary); font-weight:600;">Prev. Month Spend</div>
+                        <div style="font-size:18px; font-weight:800; color:var(--text-secondary);" id="reportPrevSpend">₹0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detailed Table -->
+            <div class="card" style="padding: 12px;">
+                <div class="section-title" style="font-size: 15px; margin-bottom: 12px; padding: 4px;">Category Comparison Table</div>
+                <div class="table-responsive">
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Expenses (₹)</th>
+                                <th>Share (%)</th>
+                                <th>Prev. (₹)</th>
+                                <th>MoM Change</th>
+                            </tr>
+                        </thead>
+                        <tbody id="reportsTableBody">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 5: SETTINGS -->
         <div id="tab-settings" class="tab-content">
             <div class="card">
                 <div class="section-title" style="font-size: 15px; margin-bottom: 12px;">Monthly Budget</div>
@@ -820,6 +964,10 @@
             <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"/></svg>
             Analytics
         </a>
+        <a class="nav-item" onclick="switchTab('reports')">
+            <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            Reports
+        </a>
         <a class="nav-item" onclick="switchTab('settings')">
             <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
             Settings
@@ -850,6 +998,7 @@
             categories: DEFAULT_CATEGORIES,
             selectedMonth: new Date().toISOString().slice(0, 7),
             selectedTag: '',
+            selectedAnalyticsCategory: null, // Holds category clicked on pie chart for filtering
             theme: 'dark'
         };
 
@@ -924,7 +1073,7 @@
             const targetTab = document.getElementById(`tab-${tabName}`);
             if (targetTab) targetTab.classList.add('active');
 
-            const navIndex = ['dashboard', 'expenses', 'analytics', 'settings'].indexOf(tabName);
+            const navIndex = ['dashboard', 'expenses', 'analytics', 'reports', 'settings'].indexOf(tabName);
             if (navIndex >= 0) {
                 document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
             }
@@ -933,12 +1082,15 @@
                 dashboard: 'Overview',
                 expenses: 'All Expenses',
                 analytics: 'Analytics',
+                reports: 'Monthly Comparison',
                 settings: 'Settings'
             };
             document.getElementById('pageTitle').textContent = titles[tabName] || 'Overview';
 
             if (tabName === 'dashboard' || tabName === 'analytics') {
                 updateDashboard();
+            } else if (tabName === 'reports') {
+                renderReportsTable();
             } else if (tabName === 'expenses') {
                 renderExpenses();
             } else if (tabName === 'settings') {
@@ -948,13 +1100,23 @@
 
         function changeMonth() {
             state.selectedMonth = document.getElementById('monthPicker').value;
+            state.selectedAnalyticsCategory = null; // Reset category filter on month change
             updateDashboard();
             if (document.getElementById('tab-expenses').classList.contains('active')) renderExpenses();
+            if (document.getElementById('tab-reports').classList.contains('active')) renderReportsTable();
             if (document.getElementById('tab-settings').classList.contains('active')) loadBudgetSetting();
         }
 
         function getFilteredExpenses() {
             return state.expenses.filter(exp => exp.date && exp.date.startsWith(state.selectedMonth));
+        }
+
+        function getPreviousMonthStr(monthStr) {
+            const [year, month] = monthStr.split('-').map(Number);
+            const date = new Date(year, month - 1 - 1, 1);
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            return `${y}-${m}`;
         }
 
         function updateDashboard() {
@@ -1028,12 +1190,31 @@
             `;
         }
 
+        function resetAnalyticsCategoryFilter() {
+            state.selectedAnalyticsCategory = null;
+            updateDashboard();
+        }
+
         function renderCharts(expenses) {
             const catMap = {};
-            const tagMap = {};
-
+            
             expenses.forEach(exp => {
                 catMap[exp.category] = (catMap[exp.category] || 0) + parseFloat(exp.amount);
+            });
+
+            // Filter expenses for sub-category bar chart based on selected category
+            let subCategoryExpenses = expenses;
+            const filterBadgeEl = document.getElementById('analyticsCategoryFilterBadge');
+            
+            if (state.selectedAnalyticsCategory) {
+                subCategoryExpenses = expenses.filter(exp => exp.category === state.selectedAnalyticsCategory);
+                filterBadgeEl.innerHTML = `<span class="filter-badge">${state.selectedAnalyticsCategory} <span class="filter-badge-reset" onclick="resetAnalyticsCategoryFilter()">✕</span></span>`;
+            } else {
+                filterBadgeEl.innerHTML = '';
+            }
+
+            const tagMap = {};
+            subCategoryExpenses.forEach(exp => {
                 const tagKey = exp.tag || (exp.note ? exp.note : 'General');
                 tagMap[tagKey] = (tagMap[tagKey] || 0) + parseFloat(exp.amount);
             });
@@ -1045,28 +1226,14 @@
             const tagLabels = Object.keys(tagMap);
             const tagData = Object.values(tagMap);
 
-            // Distinct, vibrant colors across the spectrum for each category
             const DISTINCT_COLORS = [
-                '#FF5964', // Coral Red (e.g. Food)
-                '#35A7FF', // Sky Blue (e.g. Grocery)
-                '#FFC436', // Golden Amber (e.g. Health)
-                '#10B981', // Emerald Green (e.g. Entertainment)
-                '#9333EA', // Purple (e.g. Shopping)
-                '#F97316', // Bright Orange (e.g. Fuel)
-                '#EC4899', // Hot Pink (e.g. EMI & Cards)
-                '#14B8A6', // Mint Teal (e.g. Travel)
-                '#6366F1', // Indigo (e.g. Rent)
-                '#84CC16', // Lime Green (e.g. Milk)
-                '#06B6D4', // Cyan (e.g. Miscellaneous)
-                '#D97706', // Ochre
-                '#F43F5E', // Rose
-                '#8B5CF6', // Violet
-                '#64748B'  // Slate Gray
+                '#FF5964', '#35A7FF', '#FFC436', '#10B981', '#9333EA',
+                '#F97316', '#EC4899', '#14B8A6', '#6366F1', '#84CC16',
+                '#06B6D4', '#D97706', '#F43F5E', '#8B5CF6', '#64748B'
             ];
 
             const colors = DISTINCT_COLORS.slice(0, catLabels.length);
 
-            // Crisp white datalabels directly on top of pie segments without slice borders
             const datalabelsConfig = {
                 color: '#ffffff',
                 font: { weight: 'bold', size: 12 },
@@ -1079,10 +1246,8 @@
                 }
             };
 
-            // Dynamic text color based explicitly on active theme mode
             const primaryTextColor = state.theme === 'light' ? '#1f261d' : '#f2f5f0';
 
-            // Custom Legend generator to show Category, % Share, and Rupee Amount
             const legendWithPct = {
                 position: 'bottom',
                 labels: {
@@ -1126,7 +1291,7 @@
                 }
             };
 
-            // 1. Dashboard Doughnut Chart (No borders between slices, crisp white text inside)
+            // 1. Dashboard Doughnut Chart
             const canvasDash = document.getElementById('dashboardPieChart');
             if (canvasDash) {
                 if (dashPieChartInstance) dashPieChartInstance.destroy();
@@ -1153,7 +1318,7 @@
                 });
             }
 
-            // 2. Analytics Category Pie Chart (No borders between slices, crisp white text inside)
+            // 2. Analytics Category Pie Chart with Click Handler to Filter Sub-categories
             const canvasCat = document.getElementById('analyticsCategoryChart');
             if (canvasCat) {
                 if (analyticsCatChartInstance) analyticsCatChartInstance.destroy();
@@ -1171,8 +1336,32 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
+                        onClick: (event, elements, chart) => {
+                            if (elements.length > 0) {
+                                const index = elements[0].index;
+                                const clickedCategory = chart.data.labels[index];
+                                if (state.selectedAnalyticsCategory === clickedCategory) {
+                                    state.selectedAnalyticsCategory = null; // Toggle off if clicked twice
+                                } else {
+                                    state.selectedAnalyticsCategory = clickedCategory;
+                                }
+                                updateDashboard();
+                            }
+                        },
                         plugins: {
-                            legend: { ...legendWithPct, position: 'right' },
+                            legend: { 
+                                ...legendWithPct, 
+                                position: 'right',
+                                onClick: (e, legendItem, legend) => {
+                                    const clickedCategory = legendItem.text.split(':')[0].trim();
+                                    if (state.selectedAnalyticsCategory === clickedCategory) {
+                                        state.selectedAnalyticsCategory = null;
+                                    } else {
+                                        state.selectedAnalyticsCategory = clickedCategory;
+                                    }
+                                    updateDashboard();
+                                }
+                            },
                             tooltip: tooltipWithPct,
                             datalabels: datalabelsConfig
                         }
@@ -1216,6 +1405,100 @@
                     }
                 });
             }
+        }
+
+        function renderReportsTable() {
+            const prevMonth = getPreviousMonthStr(state.selectedMonth);
+
+            const currExp = state.expenses.filter(exp => exp.date && exp.date.startsWith(state.selectedMonth));
+            const prevExp = state.expenses.filter(exp => exp.date && exp.date.startsWith(prevMonth));
+
+            const totalCurr = currExp.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+            const totalPrev = prevExp.reduce((s, e) => s + parseFloat(e.amount || 0), 0);
+
+            // Update Header Summary
+            document.getElementById('reportCurrSpend').textContent = `₹${Math.round(totalCurr).toLocaleString('en-IN')}`;
+            document.getElementById('reportPrevSpend').textContent = `₹${Math.round(totalPrev).toLocaleString('en-IN')}`;
+
+            const currMonthName = new Date(state.selectedMonth + '-01').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+            const prevMonthName = new Date(prevMonth + '-01').toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+            document.getElementById('reportsComparisonTitle').textContent = `${currMonthName} vs ${prevMonthName}`;
+
+            // Aggregate spend by category
+            const catCurrMap = {};
+            const catPrevMap = {};
+
+            currExp.forEach(e => catCurrMap[e.category] = (catCurrMap[e.category] || 0) + parseFloat(e.amount || 0));
+            prevExp.forEach(e => catPrevMap[e.category] = (catPrevMap[e.category] || 0) + parseFloat(e.amount || 0));
+
+            const allCategories = Array.from(new Set([...Object.keys(catCurrMap), ...Object.keys(catPrevMap)]));
+
+            if (allCategories.length === 0) {
+                document.getElementById('reportsTableBody').innerHTML = `
+                    <tr>
+                        <td colspan="5" class="empty-state" style="padding:20px;">No expense data for ${currMonthName} or ${prevMonthName}.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            const tableRowsData = allCategories.map(catName => {
+                const curr = catCurrMap[catName] || 0;
+                const prev = catPrevMap[catName] || 0;
+                const share = totalCurr > 0 ? ((curr / totalCurr) * 100) : 0;
+
+                let changePct = 0;
+                let changeType = 'flat'; // 'inc', 'dec', 'new', 'flat'
+
+                if (prev === 0 && curr > 0) {
+                    changeType = 'new';
+                } else if (prev === 0 && curr === 0) {
+                    changeType = 'flat';
+                } else {
+                    const diff = curr - prev;
+                    changePct = (diff / prev) * 100;
+                    if (changePct > 0) changeType = 'inc';
+                    else if (changePct < 0) changeType = 'dec';
+                    else changeType = 'flat';
+                }
+
+                const catObj = state.categories.find(c => c.name === catName) || { icon: '📦' };
+
+                return { name: catName, icon: catObj.icon, curr, prev, share, changePct, changeType };
+            });
+
+            // Sort by current month spend descending
+            tableRowsData.sort((a, b) => b.curr - a.curr);
+
+            const html = tableRowsData.map(row => {
+                let badgeHtml = '';
+                if (row.changeType === 'new') {
+                    badgeHtml = `<span class="mom-badge new">✨ New</span>`;
+                } else if (row.changeType === 'inc') {
+                    badgeHtml = `<span class="mom-badge inc">⬆️ +${Math.abs(Math.round(row.changePct))}%</span>`;
+                } else if (row.changeType === 'dec') {
+                    badgeHtml = `<span class="mom-badge dec">⬇️ -${Math.abs(Math.round(row.changePct))}%</span>`;
+                } else {
+                    badgeHtml = `<span class="mom-badge flat">0%</span>`;
+                }
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span style="font-size:18px;">${row.icon}</span>
+                                <span>${row.name}</span>
+                            </div>
+                        </td>
+                        <td>₹${Math.round(row.curr).toLocaleString('en-IN')}</td>
+                        <td>${Math.round(row.share)}%</td>
+                        <td style="color:var(--text-secondary);">₹${Math.round(row.prev).toLocaleString('en-IN')}</td>
+                        <td>${badgeHtml}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('reportsTableBody').innerHTML = html;
         }
 
         function openAddModal() {
@@ -1321,6 +1604,7 @@
             closeAddModal();
             updateDashboard();
             if (document.getElementById('tab-expenses').classList.contains('active')) renderExpenses();
+            if (document.getElementById('tab-reports').classList.contains('active')) renderReportsTable();
         }
 
         function handleDeleteCurrentExpense() {
@@ -1333,6 +1617,7 @@
             showToast("Expense deleted!");
             updateDashboard();
             if (document.getElementById('tab-expenses').classList.contains('active')) renderExpenses();
+            if (document.getElementById('tab-reports').classList.contains('active')) renderReportsTable();
         }
 
         function addNewCategory() {
@@ -1417,6 +1702,7 @@
             state.expenses = [];
             state.budgets = {};
             state.categories = DEFAULT_CATEGORIES;
+            state.selectedAnalyticsCategory = null;
             updateDashboard();
             renderCategoryGrid();
             showToast('All data cleared successfully.');
